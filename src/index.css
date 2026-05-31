@@ -1,1 +1,44 @@
-body { font-family: Arial, system-ui, sans-serif; margin: 16px; }
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Pretendard', system-ui, sans-serif;
+  background-color: #EEF2FA;
+  margin: 0;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #1D3D7A;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(29, 61, 122, 0.35);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #1D3D7A;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 8px rgba(29, 61, 122, 0.35);
+}

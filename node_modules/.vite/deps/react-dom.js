@@ -1,4 +1,4 @@
-import { n as __commonJSMin, t as require_react } from "./react-DI8Hxiyg.js";
+import { n as __commonJSMin, t as require_react } from "./react-CoTh1R2n.js";
 //#region node_modules/react-dom/cjs/react-dom.development.js
 /**
 * @license React
