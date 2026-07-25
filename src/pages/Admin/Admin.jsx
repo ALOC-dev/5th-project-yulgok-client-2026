@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   approveCertification,
@@ -7,6 +7,7 @@ import {
   getAdminCertification,
   getAdminCertifications,
   getAdminErrorMessage,
+  getAdminUser,
   getAdminUsers,
   getCurrentUser,
   getMatchingConfig,
@@ -15,6 +16,7 @@ import {
   updateMatchingConfig,
 } from '../../api/admin/admin.js';
 import LoadingSpinner from '../../components/LoadingSpinner.js';
+import { getProfileImageUrl } from '../../utils/profileImage.js';
 
 const tabs = [
   { id: 'users', label: '회원 관리' },
@@ -66,13 +68,14 @@ function StatusPill({ value }) {
 
 function FallbackAvatar({ src, name }) {
   const initial = name?.trim()?.[0] ?? '?';
+  const imageUrl = getProfileImageUrl(src, '');
   const [hasImageError, setHasImageError] = useState(false);
 
-  if (src && !hasImageError && src !== 'string') {
+  if (imageUrl && !hasImageError) {
     return (
       <img
         className="h-10 w-10 rounded-full bg-ui-sub object-cover"
-        src={src}
+        src={imageUrl}
         alt={`${name} 프로필`}
         onError={() => setHasImageError(true)}
       />
@@ -98,6 +101,129 @@ function SectionMessage({ children, tone = 'default' }) {
   );
 }
 
+function getUserDetail(user) {
+  return user?.detail ?? user?.details ?? user?.userDetail ?? {};
+}
+
+function getUserId(user) {
+  return user?.userId ?? user?.id ?? '-';
+}
+
+function getUserRealName(user) {
+  const detail = getUserDetail(user);
+  return user?.realName ?? user?.name ?? detail.realName ?? detail.name ?? '';
+}
+
+function getUserNickname(user) {
+  return user?.nickname ?? user?.profile?.nickname ?? '';
+}
+
+function getUserDisplayName(user) {
+  return getUserNickname(user) || getUserRealName(user) || '-';
+}
+
+function getUserSecondaryName(user) {
+  const nickname = getUserNickname(user);
+  const realName = getUserRealName(user);
+
+  if (nickname && realName && nickname !== realName) return realName;
+  return '';
+}
+
+function getUserDetailValue(user, key) {
+  const detail = getUserDetail(user);
+  return user?.[key] ?? detail?.[key] ?? '-';
+}
+
+function getCertificationUserName(certification) {
+  const realName = (
+    certification?.userRealName ??
+    certification?.realName ??
+    certification?.name ??
+    certification?.user?.realName ??
+    certification?.user?.name ??
+    certification?.detail?.realName ??
+    ''
+  );
+  const nickname = (
+    certification?.userNickname ??
+    certification?.nickname ??
+    certification?.user?.nickname ??
+    ''
+  );
+
+  if (nickname && realName && nickname !== realName) return `${nickname} (${realName})`;
+  return nickname || realName || certification?.userId || '-';
+}
+
+function DetailRow({ label, value }) {
+  return (
+    <>
+      <dt className="font-bold text-fg-basic-muted">{label}</dt>
+      <dd className="min-w-0 break-words text-fg-basic">{value || '-'}</dd>
+    </>
+  );
+}
+
+function AdminUserDetailPanel({ errorMessage, isLoading, user }) {
+  if (!user) {
+    return (
+      <aside className="rounded-lg border border-[#d9e3f0] bg-white p-4">
+        <p className="py-16 text-center text-sm text-fg-basic-muted">
+          회원을 선택하면 상세 정보가 보여요.
+        </p>
+      </aside>
+    );
+  }
+
+  const realName = getUserRealName(user);
+  const nickname = getUserNickname(user);
+
+  return (
+    <aside className="rounded-lg border border-[#d9e3f0] bg-white p-4">
+      <div className="flex items-center gap-3">
+        <FallbackAvatar src={user.profileImageUrl} name={getUserDisplayName(user)} />
+        <div className="min-w-0">
+          <h3 className="truncate font-extrabold text-fg-primary">
+            {nickname || realName || '이름 없음'}
+          </h3>
+          <p className="text-xs text-fg-basic-muted">{getUserId(user)}</p>
+        </div>
+      </div>
+
+      {isLoading && (
+        <div className="mt-5 flex justify-center py-4 text-brand-primary">
+          <LoadingSpinner label="회원 상세 정보를 불러오는 중입니다." size="sm" />
+        </div>
+      )}
+
+      {errorMessage && (
+        <p className="mt-5 rounded-lg border border-[#f2b8c3] bg-[#fff1f3] px-3 py-2 text-xs font-semibold text-[#a83f57]">
+          {errorMessage}
+        </p>
+      )}
+
+      <dl className="mt-5 grid grid-cols-[82px_1fr] gap-x-3 gap-y-2 text-sm">
+        <DetailRow label="닉네임" value={nickname} />
+        <DetailRow label="실명" value={realName} />
+        <DetailRow label="이메일" value={user.email} />
+        <DetailRow label="전화번호" value={getUserDetailValue(user, 'phoneNumber')} />
+        <DetailRow label="학번" value={getUserDetailValue(user, 'studentId')} />
+        <DetailRow label="학과" value={getUserDetailValue(user, 'department')} />
+        <DetailRow label="나이" value={getUserDetailValue(user, 'age')} />
+        <DetailRow label="성별" value={getUserDetailValue(user, 'gender')} />
+        <DetailRow label="가입일" value={formatDateTime(user.createdAt)} />
+      </dl>
+
+      <div className="mt-5 flex flex-wrap gap-2">
+        <StatusPill value={user.role} />
+        <StatusPill value={user.status} />
+        {user.certificationStatus && <StatusPill value={user.certificationStatus} />}
+      </div>
+    </aside>
+  );
+}
+
 function AdminUsersPanel({ currentUser }) {
   const [usersData, setUsersData] = useState({
     users: [],
@@ -110,6 +236,10 @@ function AdminUsersPanel({ currentUser }) {
   const [isLoading, setIsLoading] = useState(true);
   const [actionUserId, setActionUserId] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [isUserDetailLoading, setIsUserDetailLoading] = useState(false);
+  const [userDetailErrorMessage, setUserDetailErrorMessage] = useState('');
+  const selectedUserRequestIdRef = useRef(0);
 
   const loadUsers = useCallback(async (page) => {
     try {
@@ -167,6 +297,11 @@ function AdminUsersPanel({ currentUser }) {
             item.userId === updatedUser.userId ? updatedUser : item
           )),
         }));
+        setSelectedUser((currentSelectedUser) => (
+          currentSelectedUser?.userId === updatedUser.userId
+            ? { ...currentSelectedUser, ...updatedUser }
+            : currentSelectedUser
+        ));
       }
     } catch (error) {
       setErrorMessage(getAdminErrorMessage(error, '회원 상태를 변경하지 못했어요.'));
@@ -175,10 +310,37 @@ function AdminUsersPanel({ currentUser }) {
     }
   }
 
+  async function handleSelectUser(user) {
+    const userId = getUserId(user);
+    if (!userId || userId === '-') return;
+
+    const requestId = selectedUserRequestIdRef.current + 1;
+    selectedUserRequestIdRef.current = requestId;
+    setSelectedUser(user);
+    setIsUserDetailLoading(true);
+    setUserDetailErrorMessage('');
+
+    try {
+      const detail = await getAdminUser(userId);
+      if (selectedUserRequestIdRef.current !== requestId) return;
+
+      setSelectedUser(detail ? { ...user, ...detail } : user);
+    } catch (error) {
+      if (selectedUserRequestIdRef.current !== requestId) return;
+
+      setUserDetailErrorMessage(getAdminErrorMessage(error, '회원 상세 정보를 불러오지 못했어요.'));
+    } finally {
+      if (selectedUserRequestIdRef.current === requestId) {
+        setIsUserDetailLoading(false);
+      }
+    }
+  }
+
   const currentUserId = currentUser?.id ?? currentUser?.userId;
 
   return (
-    <section className="flex flex-col gap-4">
+    <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-lg font-extrabold text-fg-primary">회원 관리</h2>
@@ -231,13 +393,21 @@ function AdminUsersPanel({ currentUser }) {
                 const isBanned = user.status === 'BANNED';
 
                 return (
-                  <tr key={user.userId} className="border-t border-[#edf1f7]">
+                  <tr
+                    key={user.userId}
+                    className={`cursor-pointer border-t border-[#edf1f7] ${
+                      getUserId(selectedUser) === getUserId(user) ? 'bg-[#f5f8fc]' : ''
+                    }`}
+                    onClick={() => handleSelectUser(user)}
+                  >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <FallbackAvatar src={user.profileImageUrl} name={user.nickname} />
+                        <FallbackAvatar src={user.profileImageUrl} name={getUserDisplayName(user)} />
                         <div className="min-w-0">
-                          <p className="font-extrabold text-fg-basic">{user.nickname || '-'}</p>
-                          <p className="text-xs text-fg-basic-muted">{user.userId}</p>
+                          <p className="font-extrabold text-fg-basic">{getUserDisplayName(user)}</p>
+                          <p className="text-xs text-fg-basic-muted">
+                            {[getUserSecondaryName(user), user.userId].filter(Boolean).join(' · ')}
+                          </p>
                         </div>
                       </div>
                     </td>
@@ -254,7 +424,10 @@ function AdminUsersPanel({ currentUser }) {
                         disabled={isSelf || actionUserId === user.userId}
                         aria-label={actionUserId === user.userId ? '회원 상태를 변경하는 중입니다.' : undefined}
                         title={isSelf ? '본인 계정은 제재할 수 없어요.' : undefined}
-                        onClick={() => handleToggleBan(user)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleToggleBan(user);
+                        }}
                       >
                         {actionUserId === user.userId
                           ? <LoadingSpinner label="회원 상태를 변경하는 중입니다." size="sm" />
@@ -292,6 +465,12 @@ function AdminUsersPanel({ currentUser }) {
           </button>
         </div>
       </div>
+      </div>
+      <AdminUserDetailPanel
+        errorMessage={userDetailErrorMessage}
+        isLoading={isUserDetailLoading}
+        user={selectedUser}
+      />
     </section>
   );
 }
@@ -467,7 +646,9 @@ function AdminCertificationsPanel() {
               <div className="min-w-0">
                 <p className="font-extrabold text-fg-basic">{certification.semester}</p>
                 <p className="truncate text-xs text-fg-basic-muted">
-                  {certification.userId} · {formatDateTime(certification.createdAt)}
+                  {[getCertificationUserName(certification), formatDateTime(certification.createdAt)]
+                    .filter(Boolean)
+                    .join(' · ')}
                 </p>
               </div>
               <StatusPill value={certification.status} />
@@ -538,14 +719,11 @@ function AdminCertificationsPanel() {
             )}
 
             <dl className="grid grid-cols-[96px_1fr] gap-x-3 gap-y-2 text-sm">
-              <dt className="font-bold text-fg-basic-muted">회원 ID</dt>
-              <dd className="min-w-0 break-words text-fg-basic">{selectedCertification.userId}</dd>
-              <dt className="font-bold text-fg-basic-muted">학기</dt>
-              <dd className="text-fg-basic">{selectedCertification.semester}</dd>
-              <dt className="font-bold text-fg-basic-muted">요청일</dt>
-              <dd className="text-fg-basic">{formatDateTime(selectedCertification.createdAt)}</dd>
-              <dt className="font-bold text-fg-basic-muted">코멘트</dt>
-              <dd className="min-w-0 break-words text-fg-basic">{selectedCertification.adminComment || '-'}</dd>
+              <DetailRow label="회원" value={getCertificationUserName(selectedCertification)} />
+              <DetailRow label="회원 ID" value={selectedCertification.userId} />
+              <DetailRow label="학기" value={selectedCertification.semester} />
+              <DetailRow label="요청일" value={formatDateTime(selectedCertification.createdAt)} />
+              <DetailRow label="코멘트" value={selectedCertification.adminComment} />
             </dl>
 
             {isSelectedRequested && (

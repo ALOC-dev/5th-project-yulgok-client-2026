@@ -37,13 +37,27 @@ function MessageList({
 }) {
   const bottomRef = useRef(null);
   const previousMessageCountRef = useRef(0);
+  const anchorMessageIdRef = useRef(null);
 
   useEffect(() => {
-    if (messages.length > previousMessageCountRef.current) {
+    const anchorMessageId = anchorMessageIdRef.current;
+
+    if (anchorMessageId != null) {
+      document
+        .querySelector(`[data-message-id="${CSS.escape(String(anchorMessageId))}"]`)
+        ?.scrollIntoView({ block: 'start' });
+      anchorMessageIdRef.current = null;
+    } else if (messages.length > previousMessageCountRef.current) {
       bottomRef.current?.scrollIntoView({ block: 'end' });
     }
+
     previousMessageCountRef.current = messages.length;
   }, [messages]);
+
+  function handleLoadPreviousClick() {
+    anchorMessageIdRef.current = messages[0]?.messageId ?? null;
+    onLoadPrevious?.();
+  }
 
   if (messages.length === 0) {
     return (
@@ -61,7 +75,7 @@ function MessageList({
           className="mx-auto my-2 min-w-[138px] rounded-full bg-ui-sub px-4 py-2 text-xs font-semibold text-fg-primary disabled:opacity-60"
           disabled={isLoadingPrevious}
           aria-label={isLoadingPrevious ? '이전 메시지를 불러오는 중입니다.' : undefined}
-          onClick={onLoadPrevious}
+          onClick={handleLoadPreviousClick}
         >
           {isLoadingPrevious
             ? <LoadingSpinner label="이전 메시지를 불러오는 중입니다." size="sm" />
@@ -93,14 +107,16 @@ function MessageList({
                 {formatMessageDate(message.createdAt)}
               </time>
             )}
-            <MessageItem
-              message={message}
-              isMine={isMine}
-              showProfile={showProfile}
-              showTime={showTime}
-              partnerName={partnerName}
-              partnerProfileImageUrl={partnerProfileImageUrl}
-            />
+            <div data-message-id={message.messageId}>
+              <MessageItem
+                message={message}
+                isMine={isMine}
+                showProfile={showProfile}
+                showTime={showTime}
+                partnerName={partnerName}
+                partnerProfileImageUrl={partnerProfileImageUrl}
+              />
+            </div>
           </Fragment>
         );
       })}
