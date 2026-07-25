@@ -36,7 +36,6 @@ function Slider({
                     className="block text-sm font-bold text-fg-basic"
                 >
                     {label}
-                    {required && <span className="ml-1 text-[#c04a67]" aria-hidden="true">*</span>}
                 </label>
             )}
 
