@@ -16,6 +16,7 @@ import {
   updateMatchingConfig,
 } from '../../api/admin/admin.js';
 import LoadingSpinner from '../../components/LoadingSpinner.js';
+import { getProfileImageUrl } from '../../utils/profileImage.js';
 
 const tabs = [
   { id: 'users', label: '회원 관리' },
@@ -67,13 +68,14 @@ function StatusPill({ value }) {
 
 function FallbackAvatar({ src, name }) {
   const initial = name?.trim()?.[0] ?? '?';
+  const imageUrl = getProfileImageUrl(src, '');
   const [hasImageError, setHasImageError] = useState(false);
 
-  if (src && !hasImageError && src !== 'string') {
+  if (imageUrl && !hasImageError) {
     return (
       <img
         className="h-10 w-10 rounded-full bg-ui-sub object-cover"
-        src={src}
+        src={imageUrl}
         alt={`${name} 프로필`}
         onError={() => setHasImageError(true)}
       />
