@@ -1,5 +1,10 @@
 import apiClient from '../client-api.js';
 
+export async function getMyCertification() {
+    const response = await apiClient.get('/api/certifications/me');
+    return response.data?.data ?? null;
+}
+
 export async function getUploadUrl(fileName, contentType) {
     const response = await apiClient.post('/api/certifications/presigned-url', {fileName, contentType});
     const uploadUrl = response.data?.data?.uploadUrl;

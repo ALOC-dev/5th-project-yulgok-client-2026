@@ -3,7 +3,12 @@ import ProgressBar from "../../components/ProgressBar";
 import CertificateBtnGroup from "./components/CertificateBtnGroup";
 import DormitoryImageUploader from "./components/DormitoryImageUploader";
 import { useNavigate } from "react-router-dom";
-import { certificate, getUploadUrl, uploadCertificationImage } from "../../api/certification/certifications.js";
+import {
+    certificate,
+    getMyCertification,
+    getUploadUrl,
+    uploadCertificationImage,
+} from "../../api/certification/certifications.js";
 import { submitCertificationImage } from "../../api/certification/certificationFlow.js";
 import { useAuth } from "../../auth/AuthContext.jsx";
 import { canAccessCertifiedRoutes } from "../../auth/serviceFlow.js";
@@ -12,6 +17,14 @@ import LoadingSpinner from "../../components/LoadingSpinner.js";
 
 function isCertificationEligible(user) {
     return user?.role === 'USER' && user?.surveyCompleted === true;
+}
+
+function getRejectionMessage(adminComment) {
+    const trimmedComment = adminComment?.trim();
+
+    return trimmedComment
+        ? `인증이 반려됐어요. 거절 사유: ${trimmedComment}`
+        : '인증이 반려됐어요. 사진을 확인한 뒤 다시 요청해주세요.';
 }
 
 function Certification() {
@@ -36,6 +49,34 @@ function Certification() {
             navigate('/matching', { replace: true });
         }
     }, [currentUser, navigate]);
+
+    useEffect(() => {
+        if (!isRejected) return undefined;
+
+        let isActive = true;
+
+        async function loadRejectionReason() {
+            try {
+                const certification = await getMyCertification();
+
+                if (isActive && certification?.status === 'REJECTED') {
+                    setMessage(getRejectionMessage(certification.adminComment));
+                }
+            } catch (error) {
+                console.error('인증 거절 사유 조회 실패', error);
+
+                if (isActive) {
+                    setMessage(getRejectionMessage());
+                }
+            }
+        }
+
+        loadRejectionReason();
+
+        return () => {
+            isActive = false;
+        };
+    }, [isRejected]);
 
     useEffect(() => {
         return () => {
@@ -76,7 +117,13 @@ function Certification() {
                         && user.certificationStatus === 'REJECTED'
                     ) {
                         setRequestedThisSession(false);
-                        setMessage('인증이 반려됐어요. 사진을 확인한 뒤 다시 요청해주세요.');
+                        try {
+                            const certification = await getMyCertification();
+                            setMessage(getRejectionMessage(certification?.adminComment));
+                        } catch (rejectionReasonError) {
+                            console.error('인증 거절 사유 조회 실패', rejectionReasonError);
+                            setMessage(getRejectionMessage());
+                        }
                     } else {
                         setMessage('아직 관리자가 인증을 검토하고 있어요.');
                     }
