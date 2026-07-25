@@ -1,3 +1,5 @@
+import SelectionCheckIcon from "../../../components/SelectionCheckIcon.jsx";
+
 function MultipleBtnGroup({
     items = [],
     label,
@@ -45,13 +47,13 @@ function MultipleBtnGroup({
                             aria-pressed={isSelected}
                             onClick={() => handleClick(itemValue)}
                             className={[
-                                "w-fit shrink-0 rounded-select border-2 px-4 py-2 font-sans text-xs font-bold transition-transform active:scale-95",
+                                "inline-flex w-fit shrink-0 items-center justify-center gap-1 rounded-select border-2 px-4 py-2 font-sans text-xs font-bold transition-transform active:scale-95",
                                 isSelected
                                 ? "border-brand-primary bg-white text-brand-primary"
                                 : "border-transparent bg-white text-fg-basic"
                             ].join(" ")}
                         >
-                            {isSelected && <span aria-hidden="true">✓ </span>}
+                            {isSelected && <SelectionCheckIcon />}
                             {item}
                         </button>
                     );

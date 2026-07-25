@@ -1,3 +1,5 @@
+import SelectionCheckIcon from "./SelectionCheckIcon.jsx";
+
 function RadioBtnGroup({items = [], label, value: selectedValue, onChange, className = "", layout="", labelStyle="", required = false}) {
     return(
         <div className={`flex min-w-0 flex-col ${className}`}>
@@ -18,13 +20,13 @@ function RadioBtnGroup({items = [], label, value: selectedValue, onChange, class
                                 onChange?.(value);
                             }}
                             className={[
-                                "w-full min-w-0 rounded-select border-2 px-4 py-3 font-sans text-xs font-bold transition-transform active:scale-95",
+                                "inline-flex w-full min-w-0 items-center justify-center gap-1 rounded-select border-2 px-4 py-3 font-sans text-xs font-bold transition-transform active:scale-95",
                                 isSelected
                                 ? "border-brand-primary bg-white text-brand-primary"
                                 : "border-transparent bg-white text-fg-basic"
                             ].join(" ")}
                         >
-                            {isSelected && <span aria-hidden="true">✓ </span>}
+                            {isSelected && <SelectionCheckIcon />}
                             {item}
                         </button>
                     );
