@@ -5,7 +5,6 @@ function RadioBtnGroup({items = [], label, value: selectedValue, onChange, class
         <div className={`flex min-w-0 flex-col ${className}`}>
             <label className={`${labelStyle}`}>
                 {label}
-                {required && <span className="ml-1 text-[#c04a67]" aria-hidden="true">*</span>}
             </label>
             <div className={`mt-2 w-full gap-2 ${layout || "flex"}`}>
                 {items.map(({item, value}) => {
