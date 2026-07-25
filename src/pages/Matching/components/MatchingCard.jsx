@@ -119,12 +119,36 @@ function getMatchDateLabel(matchDate, matchStatus) {
   return `${date.getMonth() + 1}월 ${date.getDate()}일 ${eventLabel}`;
 }
 
-function getPreferenceLabel({ field, value }) {
-  const normalizedField = String(field ?? '')
+function normalizePreferenceField(field) {
+  return String(field ?? '')
     .replaceAll('_', '')
     .toUpperCase();
+}
 
+function getPreferenceLabel({ field, value }) {
+  const normalizedField = normalizePreferenceField(field);
   return PREFERENCE_LABELS[normalizedField]?.[value] ?? '생활 습관 정보';
+}
+
+function getDisplayedPreferences(person) {
+  const preferredAnswers = Array.isArray(person.preferredAnswers) ? person.preferredAnswers : [];
+  const smokingAnswer = preferredAnswers.find(
+    (answer) => normalizePreferenceField(answer?.field) === 'SMOKINGSTATUS',
+  );
+  const normalizedSmokingStatus =
+    person.smokingStatus == null ? null : Number(person.smokingStatus);
+  const smokingStatusAnswer =
+    smokingAnswer ??
+    ([0, 1].includes(normalizedSmokingStatus)
+      ? { field: 'SMOKING_STATUS', value: normalizedSmokingStatus }
+      : null);
+  const otherPreferredAnswers = preferredAnswers
+    .filter((answer) => normalizePreferenceField(answer?.field) !== 'SMOKINGSTATUS')
+    .slice(0, 3);
+
+  return smokingStatusAnswer
+    ? [smokingStatusAnswer, ...otherPreferredAnswers]
+    : otherPreferredAnswers;
 }
 
 function ProfilePlaceholder({ name }) {
@@ -149,6 +173,7 @@ function MatchingCard({ person, isFront = false }) {
     person.imageURL;
   const profileImageUrl = getProfileImageUrl(rawProfileImageUrl, '');
   const matchDateLabel = getMatchDateLabel(person.matchDate, person.matchStatus);
+  const displayedPreferences = getDisplayedPreferences(person);
   const isRecommendedToday = person.matchStatus === 'RECOMMENDED' && isMatchDateToday(person.matchDate);
   const statusInfo = isRecommendedToday
     ? {
@@ -221,7 +246,7 @@ function MatchingCard({ person, isFront = false }) {
         </div>
 
         <ul className="mt-3 flex min-h-7 flex-wrap gap-1.5" aria-label="생활 습관">
-          {(person.preferredAnswers ?? []).slice(0, 3).map((answer, index) => (
+          {displayedPreferences.map((answer, index) => (
             <li
               key={`${answer.field}-${index}`}
               className="rounded-full bg-[#e8f0fb] px-2.5 py-1 text-[11px] font-bold text-fg-primary"
