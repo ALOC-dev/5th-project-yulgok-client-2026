@@ -36,6 +36,11 @@ export async function getAdminUsers({ page = 0, size = 20 } = {}) {
   };
 }
 
+export async function getAdminUser(userId) {
+  const response = await apiClient.get(`/api/admin/users/${userId}`);
+  return response.data?.data ?? null;
+}
+
 export async function banUser(userId) {
   const response = await apiClient.patch(`/api/admin/users/${userId}/ban`);
   return response.data?.data ?? null;
