@@ -7,6 +7,7 @@ import { useAuth } from '../../auth/AuthContext.jsx';
 import { clearSurveyDraft } from '../Surveys/surveyDraft.js';
 import { getProfileImageUrl, PROFILE_IMAGE_BASE_PATH } from '../../utils/profileImage';
 import LoadingSpinner from '../../components/LoadingSpinner.js';
+import MainPageLayout from '../../layout/MainPageLayout.js';
 
 const OPEN_CHAT_URL = 'https://open.kakao.com/o/sqxsQsFi';
 
@@ -531,11 +532,7 @@ function MyPage() {
   }
 
   return (
-    <section className="mx-auto flex min-h-[calc(100dvh-96px)] w-full max-w-[430px] flex-col px-5 pb-6 pt-7">
-      <header className="flex items-center justify-between">
-        <h1 className="font-heading text-2xl font-extrabold text-fg-primary">마이 페이지</h1>
-      </header>
-
+    <MainPageLayout title="마이 페이지">
       <div className="mt-6">
         {isLoading ? (
           <div className="flex h-[178px] items-center justify-center rounded-[26px] bg-white text-sm font-bold text-fg-basic-muted shadow-sm">
@@ -624,7 +621,7 @@ function MyPage() {
           onConfirm={handleWithdraw}
         />
       )}
-    </section>
+    </MainPageLayout>
   );
 }
 

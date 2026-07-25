@@ -4,6 +4,7 @@ import { getMatchingStatus } from '../../api/matching/matching.js';
 import { chatNotificationEventName } from './chatNotificationEvents.js';
 import ChatList from './components/ChatList.jsx';
 import LoadingSpinner from '../../components/LoadingSpinner.js';
+import MainPageLayout from '../../layout/MainPageLayout.js';
 
 const EMPTY_NOTICE_TYPES = Object.freeze({
   DEFAULT: 'DEFAULT',
@@ -92,14 +93,10 @@ function Chat() {
   }, [loadChatRooms]);
 
   return (
-    <section className="flex min-h-[calc(100dvh-96px)] flex-col px-5 pb-10 pt-5">
-      <header className="flex items-center justify-between gap-4">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="font-heading text-xl font-extrabold text-fg-primary">채팅</h1>
-          <p className="font-heading text-[13px] text-fg-basic-muted">서로 하트를 보낸 유저와 채팅할 수 있어요.</p>
-        </div>
-      </header>
-
+    <MainPageLayout
+      title="채팅"
+      description="서로 하트를 보낸 유저와 채팅할 수 있어요."
+    >
       <main className="mt-3">
         {isLoading && (
           <div className="flex justify-center py-20 text-brand-primary">
@@ -135,7 +132,7 @@ function Chat() {
 
         {!isLoading && !errorMessage && chatRooms.length > 0 && <ChatList chatRooms={chatRooms} />}
       </main>
-    </section>
+    </MainPageLayout>
   );
 }
 

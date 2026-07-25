@@ -10,6 +10,7 @@ import {
   hasConfirmedMatchingNotice,
 } from '../../auth/matchingNoticeSession.js';
 import LoadingSpinner from '../../components/LoadingSpinner.js';
+import MainPageLayout from '../../layout/MainPageLayout.js';
 import ExeMatchBtn from './components/ExeMatchBtn.jsx';
 import MatchingCardStack from './components/MatchingCardStack.jsx';
 
@@ -90,23 +91,16 @@ function Matching() {
 
   return (
     <>
-      <section className="mx-auto flex min-h-[calc(100dvh-96px)] w-full min-w-0 max-w-[600px] flex-col overflow-x-clip px-[clamp(0.75rem,4vw,1.5rem)] pb-44 pt-[clamp(1rem,4vw,2rem)]">
-      <header className="flex min-w-0 items-center justify-between gap-[clamp(0.5rem,3vw,0.75rem)]">
-        <div className="min-w-0">
-          <h1 className="font-heading text-[clamp(1.25rem,3.25vw,1.625rem)] font-extrabold tracking-[-0.02em] text-fg-primary">
-            오늘의 룸매
-          </h1>
-          <p
-            className={`mt-1 text-[13px] font-medium ${
-              executeError ? 'break-words leading-5 text-[#c04a67]' : 'truncate text-fg-basic-muted'
-            }`}
-            title={executeError || undefined}
-          >
-            {executeError || executeMessage || `당신과 결이 비슷한 ${people.length || 3}명을 골라봤어요`}
-          </p>
-        </div>
-        <ExeMatchBtn onExecute={handleExecuteMatching} isLoading={isExecuting} />
-      </header>
+      <MainPageLayout
+        title="오늘의 룸매"
+        description={executeError || executeMessage || `당신과 결이 비슷한 ${people.length || 3}명을 골라봤어요`}
+        descriptionClassName={
+          executeError ? 'break-words leading-5 text-[#c04a67]' : 'truncate'
+        }
+        descriptionTitle={executeError || undefined}
+        headerAction={<ExeMatchBtn onExecute={handleExecuteMatching} isLoading={isExecuting} />}
+        className="overflow-x-clip pb-44"
+      >
 
       <aside
         className="mt-4 rounded-2xl border border-[#d4e2f4] bg-[#edf4fd] px-4 py-3 text-sm leading-6 text-fg-primary"
@@ -148,7 +142,7 @@ function Matching() {
           <MatchingCardStack people={people} onStatusRefresh={refreshMatchingPeople} />
         )}
       </div>
-      </section>
+      </MainPageLayout>
 
       <Modal
         open={isNoticeOpen}
