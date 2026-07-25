@@ -3,11 +3,11 @@ import KakaoBtn from './components/KakaoBtn.jsx';
 
 function Login() {
     return (
-        <main className="relative min-h-dvh p-5 flex flex-col bg-brand-background pb-[calc(16px+env(safe-area-inset-bottom))]">
+        <main className="relative min-h-dvh overflow-x-hidden p-5 flex flex-col bg-brand-background pb-[calc(16px+env(safe-area-inset-bottom))]">
             <img src="/uos_logo.svg" alt="uos_logo" aria-hidden="true" className="pointer-events-none absolute right-[-80px] bottom-32 w-[420px] opacity-10 scale-80"/>
             <header className="mt-4 flex items-center justify-start gap-2">
                 <img src="/logo.svg" alt="율곡" className="h-10 w-auto" />
-                <p className="font-heading text-xl font-extrabold text-fg-primary">이룸메이트</p>
+                <p className="font-heading text-xl font-extrabold text-fg-primary">이룸매이트</p>
             </header>
             <section className="flex flex-col items-start gap-y-4 mt-16">
                 <h1 className="font-heading font-bold text-fg-primary text-4xl">
