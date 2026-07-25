@@ -22,6 +22,9 @@ test('Slider supports optional positioned index labels', async () => {
   assert.match(source, /whitespace-nowrap/);
   assert.match(source, /-translate-x-1\/2/);
   assert.match(source, /h-8/);
+  assert.match(source, /px-4/);
+  assert.match(source, /inset-x-\[10px\]/);
+  assert.match(source, /mx-\[10px\]/);
 });
 
 test('SurveySleep aligns all bedtime descriptions through one index label map', async () => {

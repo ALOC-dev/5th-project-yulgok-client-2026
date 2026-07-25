@@ -40,7 +40,7 @@ function Slider({
                 </label>
             )}
 
-            <div className={label ? "mt-6" : ""}>
+            <div className={`${label ? "mt-6 " : ""}px-4`}>
                 <div className="relative h-5">
                     <div className="absolute inset-x-[10px] top-1/2 h-1 -translate-y-1/2 rounded-full bg-[#DDE6F2]" />
 
