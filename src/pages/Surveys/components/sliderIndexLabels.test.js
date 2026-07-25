@@ -59,6 +59,6 @@ test('sleep and clean survey sliders label value 3 as average', async () => {
   );
   assert.match(
     cleanSource,
-    /value=\{organizingStyle\}[\s\S]*?indexLabels=\{\{\s*3: '보통',?\s*\}\}/,
+    /value=\{organizingStyle\}[\s\S]*?rightDescription=\{\['어질러도', '괜찮음'\]\}[\s\S]*?indexLabels=\{\{\s*3: '보통',?\s*\}\}/,
   );
 });

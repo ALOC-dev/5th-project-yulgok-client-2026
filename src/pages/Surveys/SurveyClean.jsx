@@ -53,7 +53,7 @@ function SurveyClean() {
                     value={organizingStyle}
                     label="정리정돈 수준"
                     leftDescription="매우 깔끔"
-                    rightDescription="어질러도 괜찮음"
+                    rightDescription={['어질러도', '괜찮음']}
                     indexLabels={{ 3: '보통' }}
                     onChange={setOrganizingStyle}
                     required
