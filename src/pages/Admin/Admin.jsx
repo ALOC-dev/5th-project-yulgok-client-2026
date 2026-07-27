@@ -25,6 +25,25 @@ const tabs = [
 ];
 
 const userPageSize = 20;
+const userRoleOptions = ['ADMIN', 'USER', 'GUEST'];
+const userStatusOptions = ['ACTIVE', 'PENDING', 'BANNED', 'WITHDRAWN'];
+const userSortOptions = [
+  { value: 'createdAtDesc', label: '가입일 최신순' },
+  { value: 'role', label: '권한순' },
+  { value: 'status', label: '상태순' },
+  { value: 'name', label: '이름순' },
+];
+const userRolePriority = {
+  ADMIN: 0,
+  USER: 1,
+  GUEST: 2,
+};
+const userStatusPriority = {
+  ACTIVE: 0,
+  PENDING: 1,
+  BANNED: 2,
+  WITHDRAWN: 3,
+};
 
 function formatDateTime(value) {
   if (!value) return '-';
@@ -128,6 +147,44 @@ function getUserSecondaryName(user) {
 
   if (nickname && realName && nickname !== realName) return realName;
   return '';
+}
+
+function getUserCreatedTime(user) {
+  const timestamp = Date.parse(user?.createdAt);
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function compareUserName(userA, userB) {
+  return getUserDisplayName(userA).localeCompare(getUserDisplayName(userB), 'ko-KR');
+}
+
+function sortAdminUsers(users, sortKey) {
+  return [...users].sort((userA, userB) => {
+    if (sortKey === 'role') {
+      const roleDifference =
+        (userRolePriority[userA.role] ?? 99) - (userRolePriority[userB.role] ?? 99);
+      return roleDifference || compareUserName(userA, userB);
+    }
+
+    if (sortKey === 'status') {
+      const statusDifference =
+        (userStatusPriority[userA.status] ?? 99) - (userStatusPriority[userB.status] ?? 99);
+      return statusDifference || compareUserName(userA, userB);
+    }
+
+    if (sortKey === 'name') {
+      return compareUserName(userA, userB);
+    }
+
+    return getUserCreatedTime(userB) - getUserCreatedTime(userA);
+  });
+}
+
+function filterAdminUsers(users, { role, status }) {
+  return users.filter((user) => (
+    (!role || user.role === role) &&
+    (!status || user.status === status)
+  ));
 }
 
 function getUserDetailValue(user, key) {
@@ -239,6 +296,9 @@ function AdminUsersPanel({ currentUser }) {
   const [selectedUser, setSelectedUser] = useState(null);
   const [isUserDetailLoading, setIsUserDetailLoading] = useState(false);
   const [userDetailErrorMessage, setUserDetailErrorMessage] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [sortKey, setSortKey] = useState('createdAtDesc');
   const selectedUserRequestIdRef = useRef(0);
 
   const loadUsers = useCallback(async (page) => {
@@ -337,6 +397,15 @@ function AdminUsersPanel({ currentUser }) {
   }
 
   const currentUserId = currentUser?.id ?? currentUser?.userId;
+  const displayedUsers = useMemo(() => (
+    sortAdminUsers(
+      filterAdminUsers(usersData.users, {
+        role: roleFilter,
+        status: statusFilter,
+      }),
+      sortKey,
+    )
+  ), [roleFilter, sortKey, statusFilter, usersData.users]);
 
   return (
     <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -358,13 +427,53 @@ function AdminUsersPanel({ currentUser }) {
 
       {errorMessage && <SectionMessage tone="error">{errorMessage}</SectionMessage>}
 
+      <div className="grid gap-2 rounded-lg border border-[#d9e3f0] bg-white p-3 sm:grid-cols-3">
+        <label className="flex flex-col gap-1 text-xs font-extrabold text-fg-basic-muted">
+          권한
+          <select
+            className="min-h-10 rounded-lg border border-[#d7e1ef] bg-[#f8fbff] px-3 text-sm font-bold text-fg-primary outline-none focus:border-brand-primary"
+            value={roleFilter}
+            onChange={(event) => setRoleFilter(event.target.value)}
+          >
+            <option value="">전체</option>
+            {userRoleOptions.map((role) => (
+              <option key={role} value={role}>{role}</option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-extrabold text-fg-basic-muted">
+          상태
+          <select
+            className="min-h-10 rounded-lg border border-[#d7e1ef] bg-[#f8fbff] px-3 text-sm font-bold text-fg-primary outline-none focus:border-brand-primary"
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+          >
+            <option value="">전체</option>
+            {userStatusOptions.map((status) => (
+              <option key={status} value={status}>{status}</option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-extrabold text-fg-basic-muted">
+          정렬
+          <select
+            className="min-h-10 rounded-lg border border-[#d7e1ef] bg-[#f8fbff] px-3 text-sm font-bold text-fg-primary outline-none focus:border-brand-primary"
+            value={sortKey}
+            onChange={(event) => setSortKey(event.target.value)}
+          >
+            {userSortOptions.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+
       <div className="overflow-hidden rounded-lg border border-[#d9e3f0] bg-white">
         <div className="overflow-x-auto">
-          <table className="min-w-[760px] w-full border-collapse text-left text-sm">
+          <table className="min-w-[680px] w-full border-collapse text-left text-sm">
             <thead className="bg-[#f5f8fc] text-xs font-extrabold text-fg-basic-muted">
               <tr>
                 <th className="px-4 py-3">회원</th>
-                <th className="px-4 py-3">이메일</th>
                 <th className="px-4 py-3">권한</th>
                 <th className="px-4 py-3">상태</th>
                 <th className="px-4 py-3">가입일</th>
@@ -374,7 +483,7 @@ function AdminUsersPanel({ currentUser }) {
             <tbody>
               {isLoading && (
                 <tr>
-                  <td className="px-4 py-8 text-center text-fg-basic-muted" colSpan={6}>
+                  <td className="px-4 py-8 text-center text-fg-basic-muted" colSpan={5}>
                     <LoadingSpinner label="회원 목록을 불러오는 중입니다." />
                   </td>
                 </tr>
@@ -382,13 +491,21 @@ function AdminUsersPanel({ currentUser }) {
 
               {!isLoading && usersData.users.length === 0 && (
                 <tr>
-                  <td className="px-4 py-8 text-center text-fg-basic-muted" colSpan={6}>
+                  <td className="px-4 py-8 text-center text-fg-basic-muted" colSpan={5}>
                     조회된 회원이 없어요.
                   </td>
                 </tr>
               )}
 
-              {!isLoading && usersData.users.map((user) => {
+              {!isLoading && usersData.users.length > 0 && displayedUsers.length === 0 && (
+                <tr>
+                  <td className="px-4 py-8 text-center text-fg-basic-muted" colSpan={5}>
+                    현재 페이지에 조건과 일치하는 회원이 없어요.
+                  </td>
+                </tr>
+              )}
+
+              {!isLoading && displayedUsers.map((user) => {
                 const isSelf = String(user.userId) === String(currentUserId);
                 const isBanned = user.status === 'BANNED';
 
@@ -411,7 +528,6 @@ function AdminUsersPanel({ currentUser }) {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-fg-basic-muted">{user.email || '-'}</td>
                     <td className="px-4 py-3"><StatusPill value={user.role} /></td>
                     <td className="px-4 py-3"><StatusPill value={user.status} /></td>
                     <td className="px-4 py-3 text-fg-basic-muted">{formatDateTime(user.createdAt)}</td>

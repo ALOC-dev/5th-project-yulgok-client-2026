@@ -167,7 +167,7 @@ function Certification() {
         <main className="relative min-h-dvh p-5 flex flex-col bg-brand-background pb-[calc(16px+env(safe-area-inset-bottom))]">
             <ProgressBar current={6}/>
             <header className="flex flex-col my-6 gap-1">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                     <h1 className="font-heading font-extrabold text-lg text-fg-primary">
                         기숙사 인증
                     </h1>
@@ -179,6 +179,9 @@ function Certification() {
                     >
                         ?
                     </button>
+                    <span className="font-heading text-xs font-semibold text-fg-basic-muted">
+                        물음표를 누르면 예시 사진을 볼 수 있어요.
+                    </span>
                 </div>
                 <p className="font-heading text-xs text-fg-basic-muted">
                     인증을 마치면 매칭이 시작돼요.
