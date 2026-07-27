@@ -10,8 +10,8 @@ function MessageInput({ disabled = false, disabledReason = '메시지를 보낼 
     const trimmedMessage = message.trim();
     if (!trimmedMessage || disabled) return;
 
-    onSend(trimmedMessage);
-    setMessage('');
+    const sent = onSend(trimmedMessage);
+    if (sent !== false) setMessage('');
   };
 
   return (

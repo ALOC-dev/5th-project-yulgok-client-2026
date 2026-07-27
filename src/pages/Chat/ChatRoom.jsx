@@ -364,15 +364,17 @@ function ChatRoom() {
   const handleSend = useCallback((message) => {
     if (!client?.connected) {
       setSendNotice('실시간 채팅 서버에 연결 중이에요. 잠시 후 다시 보내주세요.');
-      return;
+      return false;
     }
 
     try {
       publishChatMessage(client, { roomId, message });
       setSendNotice('');
+      return true;
     } catch (error) {
       console.error('메시지를 전송하지 못했습니다.', error);
       setSendNotice('메시지를 전송하지 못했어요.');
+      return false;
     }
   }, [client, roomId]);
 
