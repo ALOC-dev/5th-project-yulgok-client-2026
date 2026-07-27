@@ -46,8 +46,17 @@ export async function refreshAccessToken() {
                 return newAccessToken;
             })
             .catch((error) => {
-                removeAccessToken();
-                notifyAuthExpired();
+                /*
+                  401/403이 아니면 refreshToken이 만료된 게 아니라
+                  네트워크나 서버가 일시적으로 불안정한 것이므로 로그아웃시키지 않는다.
+                  (터널·절전 복귀처럼 잠깐 끊긴 상황에서 로그인 화면으로 튕기는 것 방지)
+                */
+                const status = error.response?.status;
+
+                if (status === 401 || status === 403) {
+                    removeAccessToken();
+                    notifyAuthExpired();
+                }
 
                 throw error;
             })
