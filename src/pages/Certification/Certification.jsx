@@ -179,7 +179,7 @@ function Certification() {
                     >
                         ?
                     </button>
-                    <span className="font-heading text-xs font-semibold text-fg-basic-muted">
+                    <span className="inline-flex min-h-7 items-center rounded-full bg-[#e8edff] px-3 font-heading text-xs font-extrabold text-brand-primary ring-1 ring-[#d7e1ef]">
                         물음표를 누르면 예시 사진을 볼 수 있어요.
                     </span>
                 </div>

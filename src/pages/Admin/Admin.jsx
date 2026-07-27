@@ -27,8 +27,11 @@ const tabs = [
 const userPageSize = 20;
 const userRoleOptions = ['ADMIN', 'USER', 'GUEST'];
 const userStatusOptions = ['ACTIVE', 'PENDING', 'BANNED', 'WITHDRAWN'];
+const userGenderOptions = [
+  { value: 'MALE', label: '남성' },
+  { value: 'FEMALE', label: '여성' },
+];
 const userSortOptions = [
-  { value: 'createdAtDesc', label: '가입일 최신순' },
   { value: 'role', label: '권한순' },
   { value: 'status', label: '상태순' },
   { value: 'name', label: '이름순' },
@@ -149,13 +152,13 @@ function getUserSecondaryName(user) {
   return '';
 }
 
-function getUserCreatedTime(user) {
-  const timestamp = Date.parse(user?.createdAt);
-  return Number.isNaN(timestamp) ? 0 : timestamp;
-}
-
 function compareUserName(userA, userB) {
   return getUserDisplayName(userA).localeCompare(getUserDisplayName(userB), 'ko-KR');
+}
+
+function getUserGender(user) {
+  const detail = getUserDetail(user);
+  return user?.gender ?? detail?.gender ?? '';
 }
 
 function sortAdminUsers(users, sortKey) {
@@ -176,14 +179,15 @@ function sortAdminUsers(users, sortKey) {
       return compareUserName(userA, userB);
     }
 
-    return getUserCreatedTime(userB) - getUserCreatedTime(userA);
+    return compareUserName(userA, userB);
   });
 }
 
-function filterAdminUsers(users, { role, status }) {
+function filterAdminUsers(users, { gender, role, status }) {
   return users.filter((user) => (
     (!role || user.role === role) &&
-    (!status || user.status === status)
+    (!status || user.status === status) &&
+    (!gender || getUserGender(user) === gender)
   ));
 }
 
@@ -298,7 +302,8 @@ function AdminUsersPanel({ currentUser }) {
   const [userDetailErrorMessage, setUserDetailErrorMessage] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [sortKey, setSortKey] = useState('createdAtDesc');
+  const [genderFilter, setGenderFilter] = useState('');
+  const [sortKey, setSortKey] = useState('role');
   const selectedUserRequestIdRef = useRef(0);
 
   const loadUsers = useCallback(async (page) => {
@@ -400,12 +405,13 @@ function AdminUsersPanel({ currentUser }) {
   const displayedUsers = useMemo(() => (
     sortAdminUsers(
       filterAdminUsers(usersData.users, {
+        gender: genderFilter,
         role: roleFilter,
         status: statusFilter,
       }),
       sortKey,
     )
-  ), [roleFilter, sortKey, statusFilter, usersData.users]);
+  ), [genderFilter, roleFilter, sortKey, statusFilter, usersData.users]);
 
   return (
     <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -427,7 +433,7 @@ function AdminUsersPanel({ currentUser }) {
 
       {errorMessage && <SectionMessage tone="error">{errorMessage}</SectionMessage>}
 
-      <div className="grid gap-2 rounded-lg border border-[#d9e3f0] bg-white p-3 sm:grid-cols-3">
+      <div className="grid gap-2 rounded-lg border border-[#d9e3f0] bg-white p-3 sm:grid-cols-4">
         <label className="flex flex-col gap-1 text-xs font-extrabold text-fg-basic-muted">
           권한
           <select
@@ -451,6 +457,19 @@ function AdminUsersPanel({ currentUser }) {
             <option value="">전체</option>
             {userStatusOptions.map((status) => (
               <option key={status} value={status}>{status}</option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-extrabold text-fg-basic-muted">
+          성별
+          <select
+            className="min-h-10 rounded-lg border border-[#d7e1ef] bg-[#f8fbff] px-3 text-sm font-bold text-fg-primary outline-none focus:border-brand-primary"
+            value={genderFilter}
+            onChange={(event) => setGenderFilter(event.target.value)}
+          >
+            <option value="">전체</option>
+            {userGenderOptions.map((gender) => (
+              <option key={gender.value} value={gender.value}>{gender.label}</option>
             ))}
           </select>
         </label>
