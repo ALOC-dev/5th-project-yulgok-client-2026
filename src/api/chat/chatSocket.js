@@ -28,7 +28,12 @@ function getTokenExpirySeconds(accessToken) {
     const payload = accessToken.split('.')[1];
     if (!payload) return null;
 
-    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const paddedPayload = normalizedPayload.padEnd(
+      normalizedPayload.length + ((4 - (normalizedPayload.length % 4)) % 4),
+      '=',
+    );
+    const decoded = JSON.parse(atob(paddedPayload));
 
     return typeof decoded?.exp === 'number' ? decoded.exp : null;
   } catch {
