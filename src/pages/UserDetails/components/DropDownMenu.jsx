@@ -45,16 +45,18 @@ function DropDownMenu({
         if (!isOpen) return undefined;
 
         const animationFrameId = window.requestAnimationFrame(() => {
+            const scrollContainer = rootRef.current?.closest("[data-survey-scroll-region]");
             const menuBottom = listboxRef.current?.getBoundingClientRect().bottom;
-            if (menuBottom === undefined) return;
+            const visibleBottom = scrollContainer?.getBoundingClientRect().bottom;
+            if (menuBottom === undefined || visibleBottom === undefined) return;
 
             const scrollOffset = getDropdownScrollOffset(
                 menuBottom,
-                window.innerHeight,
+                visibleBottom,
             );
 
             if (scrollOffset > 0) {
-                window.scrollBy({
+                scrollContainer.scrollBy({
                     top: scrollOffset,
                     behavior: "smooth",
                 });

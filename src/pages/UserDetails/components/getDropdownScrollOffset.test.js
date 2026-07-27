@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { getDropdownScrollOffset } from './getDropdownScrollOffset.js';
 
-test('returns only the distance needed to reveal the dropdown with margin', () => {
+test('returns only the distance needed to reveal the dropdown inside a scroll region', () => {
   assert.equal(getDropdownScrollOffset(780, 720), 76);
+  assert.equal(getDropdownScrollOffset(620, 560), 76);
 });
 
 test('returns zero when the dropdown already fits in the viewport', () => {
