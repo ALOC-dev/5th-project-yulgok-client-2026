@@ -1,8 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMatchingErrorMessage, sendMatchingRequest } from '../../../api/matching/matching.js';
 import MatchingCard from './MatchingCard.jsx';
 import { CloseIcon, FilledHeartIcon, MatchingChatIcon } from './MatchingIcons.jsx';
+import {
+  getActionTransition,
+  getCircularIndex,
+  getPreservedIndex,
+} from './matchingCardQueue.js';
 
 const SWIPE_THRESHOLD = 65;
 const STACK_DEPTH = 3;
@@ -12,30 +17,41 @@ const ACTION_CONFIRMATION = {
     title: '좋아요를 보낼까요?',
     description: '상대방에게 관심을 표현하고 매칭 가능성을 확인해요.',
     confirmLabel: '좋아요 보내기',
-    direction: 1,
   },
   REJECT: {
     title: '이 추천을 넘길까요?',
     description: '넘긴 추천은 다시 보기 어려울 수 있어요.',
     confirmLabel: '추천 넘기기',
-    direction: -1,
   },
 };
 
 function MatchingCardStack({ people, onStatusRefresh }) {
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentUserId, setCurrentUserId] = useState(null);
   const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [exitDirection, setExitDirection] = useState(0);
+  const [isRejectExiting, setIsRejectExiting] = useState(false);
+  const [dismissedUserIds, setDismissedUserIds] = useState(() => new Set());
   const [pendingAction, setPendingAction] = useState('');
   const [actionError, setActionError] = useState('');
   const [confirmAction, setConfirmAction] = useState('');
   const dragStartX = useRef(null);
 
+  const displayedPeople = useMemo(
+    () => people.filter((person) => !dismissedUserIds.has(person.userId)),
+    [dismissedUserIds, people],
+  );
+  const resolvedCurrentIndex = getPreservedIndex(
+    displayedPeople,
+    currentUserId,
+    currentIndex,
+  );
+
   const visiblePeople = Array.from(
-    { length: Math.min(STACK_DEPTH, people.length) },
-    (_, offset) => people[(currentIndex + offset) % people.length],
+    { length: Math.min(STACK_DEPTH, displayedPeople.length) },
+    (_, offset) => displayedPeople[(resolvedCurrentIndex + offset) % displayedPeople.length],
   );
 
   useEffect(() => {
@@ -49,25 +65,31 @@ function MatchingCardStack({ people, onStatusRefresh }) {
     return () => window.removeEventListener('keydown', handleEscape);
   }, [confirmAction]);
 
-  const moveToNextCard = (direction = 1, onComplete) => {
-    if (exitDirection) return;
+  const moveToAdjacentCard = (direction) => {
+    if (exitDirection || isRejectExiting || pendingAction) return;
 
-    if (people.length < 2) {
-      onComplete?.();
+    if (displayedPeople.length < 2) {
+      setDragX(0);
       return;
     }
 
     setExitDirection(direction);
     window.setTimeout(() => {
-      setCurrentIndex((index) => (index + 1) % people.length);
+      const indexDelta = direction < 0 ? 1 : -1;
+      const nextIndex = getCircularIndex(
+        resolvedCurrentIndex,
+        indexDelta,
+        displayedPeople.length,
+      );
+      setCurrentUserId(displayedPeople[nextIndex]?.userId ?? null);
+      setCurrentIndex(nextIndex);
       setDragX(0);
       setExitDirection(0);
-      onComplete?.();
     }, 240);
   };
 
   const handlePointerDown = (event) => {
-    if (exitDirection) return;
+    if (exitDirection || isRejectExiting || pendingAction) return;
     if (event.target.closest('button')) return;
     dragStartX.current = event.clientX;
     setIsDragging(true);
@@ -75,7 +97,7 @@ function MatchingCardStack({ people, onStatusRefresh }) {
   };
 
   const handlePointerMove = (event) => {
-    if (dragStartX.current === null || exitDirection) return;
+    if (dragStartX.current === null || exitDirection || isRejectExiting || pendingAction) return;
     setDragX(event.clientX - dragStartX.current);
   };
 
@@ -85,14 +107,14 @@ function MatchingCardStack({ people, onStatusRefresh }) {
     setIsDragging(false);
 
     if (Math.abs(dragX) >= SWIPE_THRESHOLD) {
-      moveToNextCard(dragX > 0 ? 1 : -1);
+      moveToAdjacentCard(dragX > 0 ? 1 : -1);
     } else {
       setDragX(0);
     }
   };
 
-  const handleMatchingRequest = async (matchStatus, direction) => {
-    if (pendingAction || exitDirection) return;
+  const handleMatchingRequest = async (matchStatus) => {
+    if (pendingAction || exitDirection || isRejectExiting) return;
 
     const currentPerson = visiblePeople[0];
     if (!currentPerson?.userId) {
@@ -103,17 +125,42 @@ function MatchingCardStack({ people, onStatusRefresh }) {
     try {
       setPendingAction(matchStatus);
       setActionError('');
+      setCurrentUserId(currentPerson.userId);
       await sendMatchingRequest(currentPerson.userId, matchStatus);
-      moveToNextCard(direction, async () => {
-        try {
-          await onStatusRefresh?.();
-        } catch (refreshError) {
-          console.error('변경된 매칭 상태를 다시 불러오지 못했습니다.', refreshError);
-          setActionError(
-            getMatchingErrorMessage(refreshError, '요청은 반영됐지만 상태를 새로고침하지 못했어요.'),
-          );
-        }
-      });
+      const transition = getActionTransition(matchStatus);
+
+      if (transition.removeCurrent) {
+        setIsRejectExiting(true);
+        await new Promise((resolve) => {
+          window.setTimeout(() => {
+            const nextIndex = getCircularIndex(
+              resolvedCurrentIndex,
+              1,
+              displayedPeople.length,
+            );
+            setCurrentUserId(
+              displayedPeople.length > 1 ? displayedPeople[nextIndex]?.userId ?? null : null,
+            );
+            setDismissedUserIds((userIds) => {
+              const nextUserIds = new Set(userIds);
+              nextUserIds.add(currentPerson.userId);
+              return nextUserIds;
+            });
+            setDragX(0);
+            setIsRejectExiting(false);
+            resolve();
+          }, 240);
+        });
+      }
+
+      try {
+        await onStatusRefresh?.();
+      } catch (refreshError) {
+        console.error('변경된 매칭 상태를 다시 불러오지 못했습니다.', refreshError);
+        setActionError(
+          getMatchingErrorMessage(refreshError, '요청은 반영됐지만 상태를 새로고침하지 못했어요.'),
+        );
+      }
     } catch (error) {
       console.error('매칭 요청을 보내지 못했습니다.', error);
       setActionError(
@@ -130,7 +177,7 @@ function MatchingCardStack({ people, onStatusRefresh }) {
 
     const selectedAction = confirmAction;
     setConfirmAction('');
-    handleMatchingRequest(selectedAction, confirmation.direction);
+    handleMatchingRequest(selectedAction);
   };
 
   return (
@@ -151,11 +198,15 @@ function MatchingCardStack({ people, onStatusRefresh }) {
           ];
           const frontX = exitDirection ? exitDirection * 460 : dragX;
           const transform = isFront
-            ? `translateX(${frontX}px) rotate(${frontX / 24}deg)`
+            ? isRejectExiting
+              ? 'translateY(-90px) scale(0.97)'
+              : `translateX(${frontX}px) rotate(${frontX / 24}deg)`
             : backTransforms[stackIndex] ?? backTransforms[2];
 
           const transitionClass =
-            !isDragging || exitDirection ? 'transition-transform duration-[240ms] ease-out' : '';
+            !isDragging || exitDirection || isRejectExiting
+              ? 'transition-[transform,opacity] duration-[240ms] ease-out'
+              : '';
           const zIndex = visiblePeople.length - stackIndex;
 
           if (isFront) {
@@ -163,7 +214,7 @@ function MatchingCardStack({ people, onStatusRefresh }) {
               <div
                 key={person.userId ?? `${person.name}-${stackIndex}`}
                 className={`relative ${transitionClass}`}
-                style={{ zIndex, transform }}
+                style={{ zIndex, transform, opacity: isRejectExiting ? 0 : 1 }}
               >
                 <MatchingCard person={person} isFront />
               </div>
