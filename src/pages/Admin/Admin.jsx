@@ -1144,7 +1144,7 @@ function AdminMonitoringPanel() {
     { label: '서로 하트 매칭 수', value: matching.heartMatched, tone: 'accent' },
     { label: '최종확정 대기 수', value: matching.confirmPending },
     { label: '최종확정 완료 수', value: matching.finalConfirmed, tone: 'accent' },
-    { label: '종료된 매칭 수', value: matching.closed },
+    { label: '닫힌 매칭 수', value: matching.closed },
   ];
   const chatMetrics = [
     { label: '전체 채팅방 수', value: chat.totalRooms },
