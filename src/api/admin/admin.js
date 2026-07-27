@@ -94,6 +94,12 @@ export async function getAdminMonitoringSummary() {
   return response.data?.data ?? null;
 }
 
+export async function getAdminMonitoringUsers() {
+  const response = await apiClient.get('/api/admin/monitoring/users');
+  const users = response.data?.data?.users;
+  return Array.isArray(users) ? users : [];
+}
+
 export async function updateMatchingConfig(data) {
   const response = await apiClient.patch('/api/admin/match/config', data);
   return response.data?.data ?? null;

@@ -8,6 +8,7 @@ import {
   getAdminCertifications,
   getAdminErrorMessage,
   getAdminMonitoringSummary,
+  getAdminMonitoringUsers,
   getAdminUser,
   getAdminUsers,
   getCurrentUser,
@@ -206,6 +207,68 @@ function MonitoringVisualSummary({ chat, matching }) {
           <RatioBar label="열린 채팅방" total={totalRooms} value={openRooms} />
           <RatioBar label="닫힌 채팅방" total={totalRooms} value={closedRooms} />
         </div>
+      </div>
+    </section>
+  );
+}
+
+function AdminMonitoringUsersTable({ users }) {
+  if (users.length === 0) {
+    return (
+      <SectionMessage>
+        표시할 사용자 활동 데이터가 없어요.
+      </SectionMessage>
+    );
+  }
+
+  return (
+    <section className="rounded-lg border border-[#d9e3f0] bg-white p-4 shadow-sm">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-extrabold text-fg-primary">사용자별 활동 현황</h3>
+          <p className="mt-1 text-xs font-semibold text-fg-basic-muted">ACTIVE USER 기준으로 집계된 운영 지표예요.</p>
+        </div>
+        <span className="text-xs font-bold text-fg-basic-muted">총 {users.length}명</span>
+      </div>
+
+      <div className="mt-4 overflow-x-auto">
+        <table className="min-w-[820px] w-full border-collapse text-left text-sm">
+          <thead>
+            <tr className="border-b border-[#d9e3f0] text-xs text-fg-basic-muted">
+              <th className="px-3 py-2 font-extrabold">이름</th>
+              <th className="px-3 py-2 font-extrabold">닉네임</th>
+              <th className="px-3 py-2 text-right font-extrabold">보낸 하트</th>
+              <th className="px-3 py-2 text-right font-extrabold">받은 하트</th>
+              <th className="px-3 py-2 text-right font-extrabold">서로 하트</th>
+              <th className="px-3 py-2 font-extrabold">최종확정</th>
+              <th className="px-3 py-2 text-right font-extrabold">열린 채팅방</th>
+              <th className="px-3 py-2 text-right font-extrabold">닫힌 채팅방</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((user) => (
+              <tr key={user.userId} className="border-b border-[#edf2f8] last:border-b-0">
+                <td className="px-3 py-3 font-bold text-fg-primary">{user.realName || '-'}</td>
+                <td className="px-3 py-3 text-fg-basic-muted">{user.nickname || '-'}</td>
+                <td className="px-3 py-3 text-right font-bold text-fg-primary">{Number(user.heartSentCount) || 0}</td>
+                <td className="px-3 py-3 text-right font-bold text-fg-primary">{Number(user.heartReceivedCount) || 0}</td>
+                <td className="px-3 py-3 text-right font-bold text-fg-primary">{Number(user.heartMatchedCount) || 0}</td>
+                <td className="px-3 py-3">
+                  <span className={`inline-flex min-h-6 items-center rounded-full px-2.5 text-[11px] font-extrabold ${
+                    user.finalConfirmed
+                      ? 'bg-[#e5f4ed] text-[#21724f]'
+                      : 'bg-[#edf0f4] text-[#6e7b92]'
+                  }`}
+                  >
+                    {user.finalConfirmed ? '최종확정' : '미확정'}
+                  </span>
+                </td>
+                <td className="px-3 py-3 text-right font-bold text-fg-primary">{Number(user.openChatRoomCount) || 0}</td>
+                <td className="px-3 py-3 text-right font-bold text-fg-primary">{Number(user.closedChatRoomCount) || 0}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </section>
   );
@@ -1111,17 +1174,22 @@ function AdminMatchPanel() {
 
 function AdminMonitoringPanel() {
   const [summary, setSummary] = useState(null);
+  const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const loadSummary = useCallback(async ({ showLoading = true } = {}) => {
+  const loadMonitoring = useCallback(async ({ showLoading = true } = {}) => {
     try {
       if (showLoading) setIsLoading(true);
       setErrorMessage('');
-      const data = await getAdminMonitoringSummary();
+      const [data, userData] = await Promise.all([
+        getAdminMonitoringSummary(),
+        getAdminMonitoringUsers(),
+      ]);
       setSummary(data);
+      setUsers(userData);
     } catch (error) {
-      setErrorMessage(getAdminErrorMessage(error, '모니터링 요약을 불러오지 못했어요.'));
+      setErrorMessage(getAdminErrorMessage(error, '모니터링 정보를 불러오지 못했어요.'));
     } finally {
       if (showLoading) setIsLoading(false);
     }
@@ -1129,13 +1197,13 @@ function AdminMonitoringPanel() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      loadSummary();
+      loadMonitoring();
     }, 0);
 
     return () => {
       window.clearTimeout(timer);
     };
-  }, [loadSummary]);
+  }, [loadMonitoring]);
 
   const matching = summary?.matching ?? {};
   const chat = summary?.chat ?? {};
@@ -1165,7 +1233,7 @@ function AdminMonitoringPanel() {
           type="button"
           className="inline-flex min-h-10 items-center rounded-full border border-[#d7e1ef] bg-white px-4 text-sm font-extrabold text-fg-primary disabled:cursor-wait disabled:opacity-60"
           disabled={isLoading}
-          onClick={() => loadSummary()}
+          onClick={() => loadMonitoring()}
         >
           {isLoading ? '새로고침 중' : '새로고침'}
         </button>
@@ -1182,6 +1250,7 @@ function AdminMonitoringPanel() {
           <MonitoringVisualSummary chat={chat} matching={matching} />
           <MetricGroup metrics={matchingMetrics} title="매칭 현황" />
           <MetricGroup metrics={chatMetrics} title="채팅 현황" />
+          <AdminMonitoringUsersTable users={users} />
           <p className="text-right text-xs font-semibold text-fg-basic-muted">
             마지막 갱신 시각: {formatDateTime(summary?.updatedAt)}
           </p>
