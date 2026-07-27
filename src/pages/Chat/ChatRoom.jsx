@@ -87,7 +87,7 @@ function isDocumentVisible() {
 }
 
 function isFinalConfirmedRoom(room) {
-  return room?.matchStatus === 'FINAL_CONFIRMED' || (!room?.matchStatus && room?.status === 'CLOSED');
+  return room?.matchStatus === 'FINAL_CONFIRMED';
 }
 
 function isWaitingForPartnerConfirm(room) {
@@ -173,15 +173,11 @@ function ChatWaitingNotice() {
   );
 }
 
-function ChatTerminatedNotice({ matchStatus }) {
-  const isRejectedByOther = matchStatus === 'REJECTED_BY_OTHER';
-
+function ChatTerminatedNotice() {
   return (
     <div className="border-t border-[#dce5f1] bg-white px-4 py-4 pb-[max(16px,env(safe-area-inset-bottom))]">
       <div className="rounded-2xl bg-[#f1f4f8] px-4 py-3 text-center">
-        <p className="text-sm font-extrabold text-fg-primary">
-          {isRejectedByOther ? '상대방이 매칭을 거절했어요.' : '채팅이 종료됐어요.'}
-        </p>
+        <p className="text-sm font-extrabold text-fg-primary">채팅방이 종료되었습니다.</p>
         <p className="mt-1 text-xs font-semibold text-fg-basic-muted">
           더 이상 메시지를 보낼 수 없습니다.
         </p>
@@ -652,7 +648,7 @@ function ChatRoom() {
       ) : shouldShowWaitingNotice ? (
         <ChatWaitingNotice />
       ) : shouldShowTerminatedNotice ? (
-        <ChatTerminatedNotice matchStatus={room.matchStatus} />
+        <ChatTerminatedNotice />
       ) : (
         <MessageInput
           disabled={isInputDisabled}
