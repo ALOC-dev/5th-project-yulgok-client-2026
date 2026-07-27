@@ -7,6 +7,7 @@ import {
   getAdminCertification,
   getAdminCertifications,
   getAdminErrorMessage,
+  getAdminMonitoringSummary,
   getAdminUser,
   getAdminUsers,
   getCurrentUser,
@@ -22,6 +23,7 @@ const tabs = [
   { id: 'users', label: '회원 관리' },
   { id: 'certifications', label: '인증 요청' },
   { id: 'match', label: '매칭 날짜' },
+  { id: 'monitoring', label: '모니터링' },
 ];
 
 const userPageSize = 20;
@@ -120,6 +122,92 @@ function SectionMessage({ children, tone = 'default' }) {
     <p className={`rounded-lg border px-4 py-3 text-sm font-semibold ${toneClass}`}>
       {children}
     </p>
+  );
+}
+
+function MetricCard({ label, value, tone = 'default' }) {
+  const toneClass = tone === 'accent'
+    ? 'border-[#cbd8ff] bg-[#f2f5ff]'
+    : 'border-[#d9e3f0] bg-white';
+
+  return (
+    <div className={`rounded-lg border px-4 py-4 shadow-sm ${toneClass}`}>
+      <p className="text-xs font-extrabold text-fg-basic-muted">{label}</p>
+      <p className="mt-2 font-heading text-2xl font-extrabold text-fg-primary">{Number(value) || 0}</p>
+    </div>
+  );
+}
+
+function MetricGroup({ metrics, title }) {
+  return (
+    <section className="rounded-lg border border-[#d9e3f0] bg-white/50 p-4">
+      <h3 className="text-sm font-extrabold text-fg-primary">{title}</h3>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {metrics.map((metric) => (
+          <MetricCard
+            key={metric.label}
+            label={metric.label}
+            tone={metric.tone}
+            value={metric.value}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function getRatioValue(value, total) {
+  const numericValue = Number(value) || 0;
+  const numericTotal = Number(total) || 0;
+  if (numericTotal <= 0) return 0;
+  return Math.min(100, Math.round((numericValue / numericTotal) * 100));
+}
+
+function RatioBar({ label, value, total }) {
+  const ratio = getRatioValue(value, total);
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-between gap-3 text-xs font-bold">
+        <span className="text-fg-basic-muted">{label}</span>
+        <span className="text-fg-primary">{Number(value) || 0} / {Number(total) || 0}</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-[#e5ecf6]">
+        <div
+          className="h-full rounded-full bg-brand-primary"
+          style={{ width: `${ratio}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function MonitoringVisualSummary({ chat, matching }) {
+  const heartSent = Number(matching.heartSent) || 0;
+  const heartMatched = Number(matching.heartMatched) || 0;
+  const finalConfirmed = Number(matching.finalConfirmed) || 0;
+  const totalRooms = Number(chat.totalRooms) || 0;
+  const openRooms = Number(chat.openRooms) || 0;
+  const closedRooms = Number(chat.closedRooms) || 0;
+
+  return (
+    <section className="grid gap-4 lg:grid-cols-2">
+      <div className="rounded-lg border border-[#d9e3f0] bg-white p-4 shadow-sm">
+        <h3 className="text-sm font-extrabold text-fg-primary">매칭 전환 흐름</h3>
+        <div className="mt-4 flex flex-col gap-4">
+          <RatioBar label="서로 하트 매칭" total={heartSent} value={heartMatched} />
+          <RatioBar label="최종확정 완료" total={heartMatched} value={finalConfirmed} />
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-[#d9e3f0] bg-white p-4 shadow-sm">
+        <h3 className="text-sm font-extrabold text-fg-primary">채팅방 상태 비율</h3>
+        <div className="mt-4 flex flex-col gap-4">
+          <RatioBar label="열린 채팅방" total={totalRooms} value={openRooms} />
+          <RatioBar label="닫힌 채팅방" total={totalRooms} value={closedRooms} />
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -1021,6 +1109,88 @@ function AdminMatchPanel() {
   );
 }
 
+function AdminMonitoringPanel() {
+  const [summary, setSummary] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const loadSummary = useCallback(async ({ showLoading = true } = {}) => {
+    try {
+      if (showLoading) setIsLoading(true);
+      setErrorMessage('');
+      const data = await getAdminMonitoringSummary();
+      setSummary(data);
+    } catch (error) {
+      setErrorMessage(getAdminErrorMessage(error, '모니터링 요약을 불러오지 못했어요.'));
+    } finally {
+      if (showLoading) setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      loadSummary();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [loadSummary]);
+
+  const matching = summary?.matching ?? {};
+  const chat = summary?.chat ?? {};
+  const matchingMetrics = [
+    { label: '하트 보낸 수', value: matching.heartSent },
+    { label: '서로 하트 매칭 수', value: matching.heartMatched, tone: 'accent' },
+    { label: '최종확정 대기 수', value: matching.confirmPending },
+    { label: '최종확정 완료 수', value: matching.finalConfirmed, tone: 'accent' },
+    { label: '종료된 매칭 수', value: matching.closed },
+  ];
+  const chatMetrics = [
+    { label: '전체 채팅방 수', value: chat.totalRooms },
+    { label: '열린 채팅방 수', value: chat.openRooms, tone: 'accent' },
+    { label: '닫힌 채팅방 수', value: chat.closedRooms },
+    { label: '전체 메시지 수', value: chat.totalMessages },
+    { label: '오늘 메시지 수', value: chat.messagesToday, tone: 'accent' },
+  ];
+
+  return (
+    <section className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-extrabold text-fg-primary">모니터링</h2>
+          <p className="text-sm text-fg-basic-muted">매칭과 채팅 운영 현황을 확인해요.</p>
+        </div>
+        <button
+          type="button"
+          className="inline-flex min-h-10 items-center rounded-full border border-[#d7e1ef] bg-white px-4 text-sm font-extrabold text-fg-primary disabled:cursor-wait disabled:opacity-60"
+          disabled={isLoading}
+          onClick={() => loadSummary()}
+        >
+          {isLoading ? '새로고침 중' : '새로고침'}
+        </button>
+      </div>
+
+      {errorMessage && <SectionMessage tone="error">{errorMessage}</SectionMessage>}
+
+      {isLoading ? (
+        <div className="flex justify-center rounded-lg border border-[#d9e3f0] bg-white py-16 text-brand-primary">
+          <LoadingSpinner label="모니터링 요약을 불러오는 중입니다." />
+        </div>
+      ) : (
+        <>
+          <MonitoringVisualSummary chat={chat} matching={matching} />
+          <MetricGroup metrics={matchingMetrics} title="매칭 현황" />
+          <MetricGroup metrics={chatMetrics} title="채팅 현황" />
+          <p className="text-right text-xs font-semibold text-fg-basic-muted">
+            마지막 갱신 시각: {formatDateTime(summary?.updatedAt)}
+          </p>
+        </>
+      )}
+    </section>
+  );
+}
+
 function Admin() {
   const [currentUser, setCurrentUser] = useState(null);
   const [authStatus, setAuthStatus] = useState('checking');
@@ -1051,6 +1221,7 @@ function Admin() {
   const activePanel = useMemo(() => {
     if (activeTab === 'certifications') return <AdminCertificationsPanel />;
     if (activeTab === 'match') return <AdminMatchPanel />;
+    if (activeTab === 'monitoring') return <AdminMonitoringPanel />;
     return <AdminUsersPanel currentUser={currentUser} />;
   }, [activeTab, currentUser]);
 
@@ -1097,7 +1268,7 @@ function Admin() {
           </Link>
         </header>
 
-        <nav className="grid grid-cols-3 gap-2 rounded-lg border border-[#d9e3f0] bg-white p-1" aria-label="관리자 메뉴">
+        <nav className="grid grid-cols-2 gap-2 rounded-lg border border-[#d9e3f0] bg-white p-1 sm:grid-cols-4" aria-label="관리자 메뉴">
           {tabs.map((tab) => (
             <button
               key={tab.id}

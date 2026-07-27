@@ -89,6 +89,11 @@ export async function getMatchingConfig() {
   };
 }
 
+export async function getAdminMonitoringSummary() {
+  const response = await apiClient.get('/api/admin/monitoring/summary');
+  return response.data?.data ?? null;
+}
+
 export async function updateMatchingConfig(data) {
   const response = await apiClient.patch('/api/admin/match/config', data);
   return response.data?.data ?? null;
