@@ -103,7 +103,7 @@ function isTerminatedRoom(room) {
 }
 
 function isReadOnlyRoom(room) {
-  return isWaitingForPartnerConfirm(room) || isTerminatedRoom(room);
+  return isTerminatedRoom(room);
 }
 
 function canDecideMatch(room) {
@@ -168,7 +168,7 @@ function FinalConfirmedNotice({ contact, contactErrorMessage, isLoadingContact, 
 
 function ChatWaitingNotice() {
   return (
-    <div className="border-t border-[#dce5f1] bg-white px-4 py-4 pb-[max(16px,env(safe-area-inset-bottom))]">
+    <div className="border-t border-[#dce5f1] bg-white px-4 py-3">
       <div className="rounded-2xl bg-[#fff7df] px-4 py-3 text-center">
         <p className="text-sm font-extrabold text-fg-primary">상대방 확정 대기중이에요.</p>
         <p className="mt-1 text-xs font-semibold text-[#8b6200]">
@@ -600,7 +600,7 @@ function ChatRoom() {
   const shouldShowWaitingNotice = isWaitingForPartnerConfirm(room);
   const shouldShowFinalConfirmedNotice = isFinalConfirmedRoom(room);
   const shouldShowTerminatedNotice = isTerminatedRoom(room);
-  const isInputDisabled = shouldShowWaitingNotice || shouldShowTerminatedNotice || !isConnected;
+  const isInputDisabled = shouldShowTerminatedNotice || !isConnected;
 
   if (isLoading) {
     return (
@@ -665,12 +665,13 @@ function ChatRoom() {
           {sendNotice}
         </p>
       )}
-      {shouldShowWaitingNotice ? (
-        <ChatWaitingNotice />
-      ) : shouldShowTerminatedNotice ? (
+      {shouldShowTerminatedNotice ? (
         <ChatTerminatedNotice />
       ) : (
         <>
+          {shouldShowWaitingNotice && (
+            <ChatWaitingNotice />
+          )}
           {shouldShowFinalConfirmedNotice && (
             <FinalConfirmedNotice
               contact={confirmedContact}
