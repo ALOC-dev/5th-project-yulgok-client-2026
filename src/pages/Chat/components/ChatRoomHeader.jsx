@@ -4,8 +4,8 @@ import ProfileAvatar from './ProfileAvatar.jsx';
 
 function getRoomStatusLabel(roomStatus, matchStatus, confirmedByMe, canConfirm) {
   if (matchStatus === 'CONFIRM_PENDING' && confirmedByMe === true && canConfirm !== true) return '확정 대기';
+  if (matchStatus === 'FINAL_CONFIRMED') return '최종확정';
   if (
-    matchStatus === 'FINAL_CONFIRMED' ||
     matchStatus === 'CLOSED' ||
     matchStatus === 'REJECTED_BY_OTHER' ||
     roomStatus === 'CLOSED'
@@ -22,6 +22,7 @@ function ChatRoomHeader({
   canConfirm,
   onFinalConfirm,
   onReject,
+  onShowContact,
 }) {
   const navigate = useNavigate();
   const profileImageUrl = getProfileImageUrl(partnerProfileImageUrl, '');
@@ -57,8 +58,17 @@ function ChatRoomHeader({
         </span>
       </div>
 
-      {(onReject || onFinalConfirm) && (
+      {(onReject || onFinalConfirm || onShowContact) && (
         <div className="flex shrink-0 items-center gap-1.5">
+          {onShowContact && (
+            <button
+              type="button"
+              className="min-h-9 rounded-full bg-brand-primary px-3 text-xs font-extrabold text-white shadow-sm transition-transform active:scale-95"
+              onClick={onShowContact}
+            >
+              연락처
+            </button>
+          )}
           {onReject && (
             <button
               type="button"
